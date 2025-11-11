@@ -3,11 +3,6 @@ import numpy as np
 from pathlib import Path
 import matplotlib
 matplotlib.use("TkAgg")
-import matplotlib.pyplot as plt
-import seaborn as sns
-from matplotlib.colors import LinearSegmentedColormap
-
-
 
 
 # Load Mortgage Data and format variables
@@ -16,7 +11,7 @@ from pathlib import Path
 
 orig, perf = load_freddie_mac_data(Path("Inputs"), Path("Outputs"))
 
-###test
+
 # Data Quality Framework
 
 # 1.Data Accuracy and Validity
@@ -302,13 +297,15 @@ merged_flags = add_prepayment_flags(merged, sched)
 
 dummy_df = merged_flags[["LoanSequenceNumber", "MonthlyReportingPeriod", "PrepayType"]].copy()
 
-# Merge just the dummy into your clean merged_data
-merged_data = merged.merge(
+for df in (merged, dummy_df):
+    df["MonthlyReportingPeriod"] = pd.to_datetime(df["MonthlyReportingPeriod"]).dt.to_period("M").dt.to_timestamp()
+
+merged = merged.merge(
     dummy_df,
     on=["LoanSequenceNumber", "MonthlyReportingPeriod"],
     how="left")
 
-
+merged.to_csv("Outputs/merged.csv", index=False)
 
 
 '''
