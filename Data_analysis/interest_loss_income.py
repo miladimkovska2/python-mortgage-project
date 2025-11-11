@@ -12,7 +12,7 @@ def interest_loss_from_schedule(
     fig_filename: str = "cumulative_interest_loss.png",
 ):
     # Load & normalize dates
-    merged = pd.read_parquet(merged_path).copy()
+    merged = pd.read_csv(merged_path).copy()
     sched  = pd.read_parquet(amort_schedule_path).copy()
     merged["MonthlyReportingPeriod"] = pd.to_datetime(merged["MonthlyReportingPeriod"]).dt.to_period("M").dt.to_timestamp()
     sched["ContractualDate"]         = pd.to_datetime(sched["ContractualDate"]).dt.to_period("M").dt.to_timestamp()

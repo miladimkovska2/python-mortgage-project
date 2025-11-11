@@ -9,6 +9,7 @@ def completeness_score(
     date_col: Optional[str] = None,
     output_dir: str = "Outputs/reports/Quality_Results",
     filename: str = "completeness_report.csv",
+    first_period_after_year: Optional[int] = 2011,
     exclude_cols: Optional[list[str]] = None  
 ) -> float:
     

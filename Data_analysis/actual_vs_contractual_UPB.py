@@ -15,7 +15,7 @@ def plot_upb_actual_vs_contractual(
 ) -> pd.DataFrame:
    
     # Load inputs 
-    merged = pd.read_parquet(merged_path)
+    merged = pd.read_csv(merged_path)
     schedule = pd.read_parquet(amort_schedule_path)
 
     # Actual UPB by year 

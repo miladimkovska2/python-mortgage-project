@@ -17,7 +17,6 @@ from pathlib import Path
 orig, perf = load_freddie_mac_data(Path("Inputs"), Path("Outputs"))
 
 
-
 # Data Quality Framework
 
 # 1.Data Accuracy and Validity
@@ -125,7 +124,6 @@ rep_score = compute_overall_representativeness_score(tables_perf, tables_orig)
 
 
 
-
 # 7. Data Quality Summary Table
 
 accuracy_score = dq_scores      
@@ -161,20 +159,51 @@ output_path.mkdir(parents=True, exist_ok=True)
 summary_df.to_csv(output_path / "data_quality_summary.csv", index=False)
 
 
-
+############################################################################################################
 
 # Merge origination + performance based on LoanSequenceNumber
 merged = perf.merge(orig, on="LoanSequenceNumber", how="left")
-merged.to_parquet("Outputs/merged_data.parquet", index=False)
+merged.to_csv("Outputs/merged.csv", index=False)
+
+
+#format clean data
+# Convert date-like columns 
+date_cols = ["MonthlyReportingPeriod", "ZeroBalanceEffectiveDate", "MaturityDate"]
+for c in date_cols:
+    if c in merged.columns:
+        merged[c] = (
+            merged[c]
+            .astype(str)
+            .str.strip()
+            .replace({"": None, "NaN": None, "nan": None})
+        )
+        merged[c] = pd.to_datetime(merged[c], errors="coerce")
+
+
+# Get each loan's first reporting period
+first_periods = (
+    merged.groupby("LoanSequenceNumber")["MonthlyReportingPeriod"]
+      .min()
+      .reset_index())
+
+# Filter loans whose first period is after 2011 
+loans_after_2010 = first_periods[first_periods["MonthlyReportingPeriod"].dt.year > 2011]
+
+merged = merged[~merged["LoanSequenceNumber"].isin(loans_after_2010)]
 
 
 
+
+
+############################################################################################################
+
+'''
 # Data Analysis
-
 
 #Table 2
 from Data_analysis.contractual import loan_summary_report
 loan_summary_report(merged)
+
 
 
 # Table 3 
@@ -186,6 +215,7 @@ maturity_summary = maturity_summary_report(df=merged, cutoff_year=2025)
 # Plot active vs. contractual active loans
 from Data_analysis.active_vs_contractual import plot_active_vs_contractual_loans
 combined = plot_active_vs_contractual_loans(merged)
+
 
 
 # Table 4
@@ -208,15 +238,14 @@ cols = {
     "EstimatedLTV": "Estimated LTV",
 }
 
-desc_stats = descriptive_stats_report(perf, cols)
-
+desc_stats = descriptive_stats_report(merged, cols)
 
 
 
 # Build the contractual amortization plan
 from Data_analysis.contractual_path import build_amortization_schedule
 
-input_path = "Outputs/merged_data.parquet"      
+input_path = "Outputs/merged.csv"      
 output_path = "Outputs/amortization_schedule.parquet"
 
 amort_schedule = build_amortization_schedule(input_path)
@@ -227,7 +256,7 @@ amort_schedule.to_parquet(output_path, index=False)
 # Plot actual UPB vs contractual
 from Data_analysis.actual_vs_contractual_UPB import plot_upb_actual_vs_contractual
 
-merged_path = "Outputs/merged_data.parquet"
+merged_path = "Outputs/merged.csv"
 amort_schedule_path = "Outputs/amortization_schedule.parquet"
 
 combined = plot_upb_actual_vs_contractual(
@@ -243,7 +272,7 @@ combined = plot_upb_actual_vs_contractual(
 from Data_analysis.interest_loss_income import interest_loss_from_schedule
 
 detail, portfolio, fig_path = interest_loss_from_schedule(
-    merged_path="Outputs/merged_data.parquet",
+    merged_path="Outputs/merged.csv",
     amort_schedule_path="Outputs/amortization_schedule.parquet",
     plot=True,
     fig_dir="Outputs/Figures/data_analysis",
@@ -253,37 +282,36 @@ detail, portfolio, fig_path = interest_loss_from_schedule(
 
 # LTV over time
 from Data_analysis.plot_LTV import plot_estimated_ltv_trend
-ltv_trend = plot_estimated_ltv_trend(perf)
+ltv_trend = plot_estimated_ltv_trend(merged)
 
 
 
 # Remaining avg. interest rate 
 from Data_analysis.plot_interest import plot_interest_rate_trend
-rate_trend = plot_interest_rate_trend(perf)
+rate_trend = plot_interest_rate_trend(merged)
+'''
 
 
-
-# Define Dependent variable                       - PROBLEM for partial prepayments (for small differences say 0.05 categorized as prepayment)
+# Define Dependent variable                       
 from Define_y import add_prepayment_flags
 
-merged = pd.read_parquet("Outputs/merged_data.parquet")
-sched  = pd.read_parquet("Outputs/amortization_schedule.parquet")
+merged = pd.read_csv("Outputs/merged.csv")
+sched  = pd.read_csv("Outputs/amortization_schedule.csv")
 
-merged = add_prepayment_flags(merged, sched)
+merged_flags = add_prepayment_flags(merged, sched)
 
-# Save 
-#merged.to_parquet("Outputs/merged_with_prepay.parquet", index=False)
+dummy_df = merged_flags[["LoanSequenceNumber", "MonthlyReportingPeriod", "PrepayType"]].copy()
 
-
-# Print the smallest positive partial prepayment amount
-#min_partial = merged.loc[merged["PartialPrepayAmt"] > 0, "PartialPrepayAmt"].min()
-#print(f"\nMinimum PartialPrepayAmt: {min_partial:.2f}")
-
-# Quick counts
-#print(merged["PrepayType"].value_counts().sort_index())
+# Merge just the dummy into your clean merged_data
+merged_data = merged.merge(
+    dummy_df,
+    on=["LoanSequenceNumber", "MonthlyReportingPeriod"],
+    how="left")
 
 
 
+
+'''
 
 # Bivariate analysis
 
@@ -321,3 +349,4 @@ plt.grid(axis="y", alpha=0.3)
 plt.tight_layout()
 plt.show()
 
+'''

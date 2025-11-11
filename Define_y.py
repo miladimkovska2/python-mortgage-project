@@ -37,11 +37,15 @@ def add_prepayment_flags(merged: pd.DataFrame, sched: pd.DataFrame) -> pd.DataFr
         merged["ActualPrincipalCollected"].round(2) - merged["ScheduledPrincipalCurrent"].round(2))
     
     
-    # since I was getting flagged partial prepayments even for $0.01 intro this 
-    ABS_EPS = 1  # anything under $1 = noise - still does not work
+    ABS_EPS = 0.25 * 1212.77      # 25% of average installment (= $1, 212.77) ≈ $303
+    REL_EPS = 0.15                # 15% of scheduled principal
 
-    # Zero-out tiny noise
-    merged["PartialPrepayAmt"] = merged["PartialPrepayAmt"].where(merged["PartialPrepayAmt"].abs() > ABS_EPS, 0.0)
+    # Compute the dynamic threshold per observation
+    threshold = np.maximum(ABS_EPS, REL_EPS * merged["ScheduledPrincipalCurrent"])
+
+# Zero out anything smaller than both the absolute and relative threshold
+    merged["PartialPrepayAmt"] = np.where(merged["PartialPrepayAmt"] > threshold, merged["PartialPrepayAmt"],0.0)
+
 
     # Indicators 
     partial = ((merged["PartialPrepayAmt"] > 0) & (merged["ZeroBalanceCode"] == "not_applicable"))
@@ -54,8 +58,6 @@ def add_prepayment_flags(merged: pd.DataFrame, sched: pd.DataFrame) -> pd.DataFr
     merged.loc[partial, "PrepayType"] = 2
 
     merged["PrepayType"] = merged["PrepayType"].astype(int)
-
-
 
     return merged
 

@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def build_amortization_schedule(input_path: str) -> pd.DataFrame:
-    merged = pd.read_parquet(input_path)
+    merged = pd.read_csv(input_path)
   
     #loan-level parameters 
     loan = (

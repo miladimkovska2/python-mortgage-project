@@ -98,13 +98,16 @@ def run_consistency_checks(
     results["Consistency_Score"] = (round(1 - total_violations / denom, 3)
     if denom and denom > 0 else np.nan)
 
-# === Save report ===
+# Save report
     output_path = Path.cwd() / output_dir
     output_path.mkdir(parents=True, exist_ok=True)
 
     pd.DataFrame(results.items(), columns=["Check", "Value"]).to_csv(
     output_path / filename, index=False)
 
+    for col in ["prev_rate", "rate_changed"]:
+        if col in df2.columns:
+            df2 = df2.drop(columns=col)
 
     return df1, df2, results
 

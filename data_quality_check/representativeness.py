@@ -75,6 +75,9 @@ def check_representativeness(
         p0 = float(vc.get(0, 0.0))
         minority_share = min(p0, p1) * 100
 
+        if (p0 == 0.0) or (p1 == 0.0):
+         df.drop(columns=[col], inplace=True)
+
         records.append({
             "column": col,
             "type": "binary",
