@@ -51,6 +51,7 @@ complet_score, orig, perf = completeness_score(
     df2=perf,
     id_col="LoanSequenceNumber",
     date_col="MonthlyReportingPeriod",
+    first_period_after_year=2011, 
     exclude_cols=["ZeroBalanceEffectiveDate"])
 
 
@@ -160,8 +161,6 @@ summary_df.to_csv(output_path / "data_quality_summary.csv", index=False)
 merged = perf.merge(orig, on="LoanSequenceNumber", how="left")
 merged.to_csv("Outputs/merged.csv", index=False)
 
-
-#format clean data
 # Convert date-like columns 
 date_cols = ["MonthlyReportingPeriod", "ZeroBalanceEffectiveDate", "MaturityDate"]
 for c in date_cols:
@@ -173,22 +172,6 @@ for c in date_cols:
             .replace({"": None, "NaN": None, "nan": None})
         )
         merged[c] = pd.to_datetime(merged[c], errors="coerce")
-
-
-# Get each loan's first reporting period
-first_periods = (
-    merged.groupby("LoanSequenceNumber")["MonthlyReportingPeriod"]
-      .min()
-      .reset_index())
-
-# Filter loans whose first period is after 2011 
-loans_after_2010 = first_periods[first_periods["MonthlyReportingPeriod"].dt.year > 2011]
-
-merged = merged[~merged["LoanSequenceNumber"].isin(loans_after_2010)]
-
-
-
-
 
 ############################################################################################################
 
