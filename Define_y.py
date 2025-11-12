@@ -36,12 +36,19 @@ def add_prepayment_flags(merged: pd.DataFrame, sched: pd.DataFrame) -> pd.DataFr
     merged["PartialPrepayAmt"] = (
         merged["ActualPrincipalCollected"].round(2) - merged["ScheduledPrincipalCurrent"].round(2))
     
-    
-    ABS_EPS = 0.25 * 1212.77      # 25% of average installment (= $1, 212.77) ≈ $303
-    REL_EPS = 0.15                # 15% of scheduled principal
+
+    # build thresholds use to decide what is a significant prepayment
+
+    # 1. absolute threshold 
+    per_loan_installment = (sched.groupby("LoanSequenceNumber")["Monthly Installment"].first())
+    median_installment = per_loan_installment.median()
+    ABS_EPS = 0.25 * median_installment
+
+    # 2. relative threhold - scale based on the loan size 
+    REL_EPS = 0.15 *merged["ScheduledPrincipalCurrent"]
 
     # Compute the dynamic threshold per observation
-    threshold = np.maximum(ABS_EPS, REL_EPS * merged["ScheduledPrincipalCurrent"])
+    threshold = np.maximum(ABS_EPS, REL_EPS)
 
 # Zero out anything smaller than both the absolute and relative threshold
     merged["PartialPrepayAmt"] = np.where(merged["PartialPrepayAmt"] > threshold, merged["PartialPrepayAmt"],0.0)

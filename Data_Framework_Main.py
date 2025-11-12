@@ -9,7 +9,9 @@ matplotlib.use("TkAgg")
 from src.load_data_mortgages import load_freddie_mac_data
 from pathlib import Path
 
+
 orig, perf = load_freddie_mac_data(Path("Inputs"), Path("Outputs"))
+
 
 
 # Data Quality Framework
@@ -119,7 +121,6 @@ rep_score = compute_overall_representativeness_score(tables_perf, tables_orig)
 
 
 
-
 # 7. Data Quality Summary Table
 
 accuracy_score = dq_scores      
@@ -173,6 +174,8 @@ for c in date_cols:
         )
         merged[c] = pd.to_datetime(merged[c], errors="coerce")
 
+
+
 ############################################################################################################
 
 '''
@@ -218,7 +221,7 @@ cols = {
 
 desc_stats = descriptive_stats_report(merged, cols)
 
-
+'''
 
 # Build the contractual amortization plan
 from Data_analysis.contractual_path import build_amortization_schedule
@@ -229,6 +232,8 @@ output_path = "Outputs/amortization_schedule.parquet"
 amort_schedule = build_amortization_schedule(input_path)
 amort_schedule.to_parquet(output_path, index=False)
 
+
+output_path = "Outputs/amortization_schedule.parquet"
 
 
 # Plot actual UPB vs contractual
@@ -267,7 +272,6 @@ ltv_trend = plot_estimated_ltv_trend(merged)
 # Remaining avg. interest rate 
 from Data_analysis.plot_interest import plot_interest_rate_trend
 rate_trend = plot_interest_rate_trend(merged)
-'''
 
 
 # Define Dependent variable                       
@@ -291,7 +295,9 @@ merged = merged.merge(
 merged.to_csv("Outputs/merged.csv", index=False)
 
 
-'''
+print(sched["Schedueled Principal"].min())
+
+
 
 # Bivariate analysis
 
@@ -299,7 +305,9 @@ merged.to_csv("Outputs/merged.csv", index=False)
 from Data_analysis.corr import plot_correlation_matrix
 corr_matrix = plot_correlation_matrix(perf,orig)
 
+print("DOne")
 
+'''
 # Distribution of full prepayments (ZeroBalanceCode = 1.0) over years
 
 # Ensure date format
