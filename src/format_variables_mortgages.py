@@ -11,6 +11,11 @@ def format_datasets(orig, perf):
     orig["PPM_Flag"] = (orig["PPM_Flag"].astype(str).str.strip().replace({"Y": 1, "N": 0, "": np.nan}).astype("Int64"))
     orig["PPM_Flag"] = pd.to_numeric(orig["PPM_Flag"], errors="coerce").astype("Int64")
 
+    orig["PropertyState"]=orig["PropertyState"].astype(str)
+
+    orig["PropertyType"]=orig["PropertyType"].astype(str)
+    orig["PropertyType"].replace({"99": None}, inplace=True)
+
 # InterestOnlyFlag: 'Y' = 1, 'N' = 0
     orig["InterestOnlyFlag"] = (orig["InterestOnlyFlag"].astype(str).str.strip().replace({"Y": 1, "N": 0, "": np.nan}).astype("Int64"))
     orig["InterestOnlyFlag"] = pd.to_numeric(orig["InterestOnlyFlag"], errors="coerce").astype("Int64")
@@ -19,6 +24,7 @@ def format_datasets(orig, perf):
 
     # performance formt
     perf["LoanSequenceNumber"] = perf["LoanSequenceNumber"].astype(str)
+    perf["LoanAge"]=pd.to_numeric(perf["LoanAge"], errors="coerce")
     perf["MonthlyReportingPeriod"] = pd.to_datetime(perf["MonthlyReportingPeriod"], format="%Y%m", errors="coerce")
     perf["CurrentActualUPB"] = pd.to_numeric(perf["CurrentActualUPB"], errors="coerce")
     perf["CurrentInterestRate"] = pd.to_numeric(perf["CurrentInterestRate"], errors="coerce")

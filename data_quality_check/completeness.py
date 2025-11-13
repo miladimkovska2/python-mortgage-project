@@ -39,13 +39,13 @@ def completeness_score(
         perf = df2[[id_col, date_col]].copy()
         perf[date_col] = pd.to_datetime(perf[date_col], errors="coerce")
 
-        # Build integer month for easy gap arithmetic
+        # Build integer month 
         perf["period_int"] = perf[date_col].dt.year * 12 + perf[date_col].dt.month
         perf = perf.sort_values([id_col, "period_int"])
         perf["prev_period"] = perf.groupby(id_col)["period_int"].shift(1)
         perf["gap"] = perf["period_int"] - perf["prev_period"]
 
-        # Count months missing inside panels (gap>1 implies (gap-1) missing months)
+        # Count months missing 
         total_gaps = int(perf.loc[perf["gap"] > 1, "gap"].sub(1).sum())
 
         # Loans with any internal gap
@@ -67,7 +67,7 @@ def completeness_score(
                 .tolist()
             )
 
-    # Score combining missing values + implied gap "cells" 
+    # Combining missing values + implied gap "cells" 
     gap_cells = 0
     if df2 is not None:
         

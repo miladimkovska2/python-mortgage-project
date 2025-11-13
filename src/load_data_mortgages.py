@@ -12,17 +12,18 @@ def load_freddie_mac_data(input_dir, output_dir="Outputs"):
     orig_parquet = output_dir / "orig_formatted.parquet"
     perf_parquet = output_dir / "perf_formatted.parquet"
 
+    '''
     #If formatted Parquet files exist, load them directly
     if orig_parquet.exists() and perf_parquet.exists():
         orig = pd.read_parquet(orig_parquet)
         perf = pd.read_parquet(perf_parquet)
         return orig, perf
-
+    '''
     #read the raw text files
     orig_file = input_dir / "sample_orig_2010.txt"
     perf_file = input_dir / "sample_svcg_2010.txt"
 
-    # Define column names (as you already have)
+    # Define column names 
     orig_cols = [
         "CreditScore","FirstPaymentDate","FirstTimeHomebuyerFlag","MaturityDate",
         "MSA","MI_Percent","NumberOfUnits","OccupancyStatus","CLTV","DTI",
@@ -51,17 +52,15 @@ def load_freddie_mac_data(input_dir, output_dir="Outputs"):
     perf = pd.read_csv(perf_file, sep="|", header=None, names=perf_cols, low_memory=False)
 
     # Select relevant variables
-    orig = orig[["LoanSequenceNumber", "PPM_Flag", "MaturityDate", "InterestOnlyFlag", "UPB"]]
-    perf = perf[[
-        "LoanSequenceNumber", "CurrentActualUPB", "MonthlyReportingPeriod",
+    orig = orig[["LoanSequenceNumber", "PPM_Flag", "MaturityDate", "InterestOnlyFlag", "UPB", "PropertyState","PropertyType"]]
+    perf = perf[["LoanSequenceNumber", "CurrentActualUPB", "MonthlyReportingPeriod",
         "ZeroBalanceCode", "ZeroBalanceEffectiveDate", "CurrentInterestRate",
-        "EstimatedLTV", "ModificationFlag"
-    ]]
+        "EstimatedLTV", "ModificationFlag", "LoanAge"]]
 
-    # 🔹 Step 3: Format variables (types, categories, dates)
+    # Format variables (types, categories, dates)
     orig, perf = format_datasets(orig, perf)
 
-    # 🔹 Step 4: Save formatted data as Parquet
+    # Save formatted data as Parquet
     orig.to_parquet(orig_parquet, index=False)
     perf.to_parquet(perf_parquet, index=False)
 

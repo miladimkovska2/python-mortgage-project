@@ -65,10 +65,10 @@ def run_consistency_checks(
 
 
     # Drop loans with varying interest rate
-    both_ids = rate_changed.index[rate_changed & modified]
-    df2 = df2[~df2[id_col].isin(both_ids)].copy()
+    remove_ids = rate_changed.index[modified]
+    df2 = df2[~df2[id_col].isin(remove_ids)].copy()
     if id_col in df1.columns:
-        df1 = df1[~df1[id_col].isin(both_ids)].copy()
+        df1 = df1[~df1[id_col].isin(remove_ids)].copy()
 
 
 

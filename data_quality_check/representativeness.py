@@ -1,9 +1,6 @@
 from __future__ import annotations
-import numpy as np
-import pandas as pd
 from typing import Iterable, Dict, Any
 from pathlib import Path
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,8 +13,8 @@ def check_representativeness(
     categorical_cols: Iterable[str] = (),
     binary_cols: Iterable[str] = (),
     numeric_cols: Iterable[str] = (),
-    dom_threshold: float = 0.95,
-    low_bin_threshold: float = 0.05,
+    #dom_threshold: float = 0.95,
+    #low_bin_threshold: float = 0.05,
     n_bins: int = 10,
     include_na_in_shares: bool = False,
     output_dir: str = "Outputs/reports/Quality_Results",
@@ -145,13 +142,7 @@ def check_representativeness(
 
 
 def compute_overall_representativeness_score(report_perf: dict, report_orig: dict) -> float:
-    """
-    Compute a single overall representativeness score across origination and performance datasets.
-    Formula: 1 - (# poorly represented variables / total variables)
-    """
-    import numpy as np
-    import pandas as pd
-
+    
     combined_reports = [report_perf, report_orig]
     total_vars = 0
     well_represented = 0

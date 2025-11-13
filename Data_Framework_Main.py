@@ -3,15 +3,15 @@ import numpy as np
 from pathlib import Path
 import matplotlib
 matplotlib.use("TkAgg")
+import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 # Load Mortgage Data and format variables
 from src.load_data_mortgages import load_freddie_mac_data
-from pathlib import Path
-
 
 orig, perf = load_freddie_mac_data(Path("Inputs"), Path("Outputs"))
-
 
 
 # Data Quality Framework
@@ -29,6 +29,7 @@ rules = {
             {"col": "EstimatedLTV", "condition": lambda x: x < 0},
             {"col": "ZeroBalanceCode", "condition": lambda x: ~x.isin(valid_zbc)},
             {"col": "CurrentInterestRate", "condition": lambda x: ~x.apply(lambda v: isinstance(v, (int, float)))},
+            {"col": "LoanAge", "condition": lambda x: ~x.apply(lambda v: isinstance(v, (int, float)))},
             {"col": "CurrentActualUPB", "condition": lambda x: ~x.apply(lambda v: isinstance(v, (int, float)))},
             {"col": "EstimatedLTV", "condition": lambda x: ~x.apply(lambda v: isinstance(v, (int, float)))},
         ],
@@ -37,12 +38,13 @@ rules = {
             {"col": "UPB", "condition": lambda x: ~x.apply(lambda v: isinstance(v, (int, float)))},
             {"col": "PPM_Flag", "condition": lambda x: ~x.isin([0, 1])},
             {"col": "InterestOnlyFlag", "condition": lambda x: ~x.isin([0, 1])},
+            {"col": "PropertyState", "condition": lambda x: x.str.len() != 2},
+            {"col": "PropertyType","condition": lambda x: ~x.isin(["SF", "CO", "PU", "MH", "CP"])},
         ]
     }
 
 df_dict = {"orig": orig, "perf": perf}
 dq_scores = run_accuracy_validity_score(df_dict, rules)
-
 
 
 # 2. Data Completeness
@@ -95,7 +97,6 @@ report, outlier_score = outlier_report(
     filename="outlier_report_perf.png")
 
 
-
 # 6. Data Representativeness
 
 from data_quality_check.representativeness import (check_representativeness, compute_overall_representativeness_score)
@@ -114,11 +115,11 @@ tables_orig = check_representativeness(
     df=orig,
     binary_cols=["PPM_Flag", "InterestOnlyFlag"],
     numeric_cols=["UPB"],
+    categorical_cols=["PropertyState", "PropertyType"],
     output_dir="Outputs/reports/Quality_Results",
     image_name="representativeness_orig.png")
 
 rep_score = compute_overall_representativeness_score(tables_perf, tables_orig)
-
 
 
 # 7. Data Quality Summary Table
@@ -178,7 +179,7 @@ for c in date_cols:
 
 ############################################################################################################
 
-'''
+
 # Data Analysis
 
 #Table 2
@@ -221,7 +222,8 @@ cols = {
 
 desc_stats = descriptive_stats_report(merged, cols)
 
-'''
+
+
 
 # Build the contractual amortization plan
 from Data_analysis.contractual_path import build_amortization_schedule
@@ -274,6 +276,7 @@ from Data_analysis.plot_interest import plot_interest_rate_trend
 rate_trend = plot_interest_rate_trend(merged)
 
 
+
 # Define Dependent variable                       
 from Define_y import add_prepayment_flags
 
@@ -295,46 +298,148 @@ merged = merged.merge(
 merged.to_csv("Outputs/merged.csv", index=False)
 
 
-print(sched["Schedueled Principal"].min())
 
-
-
-# Bivariate analysis
+############ PLots from Bivariate  ############################################
 
 #Corr matrix
 from Data_analysis.corr import plot_correlation_matrix
-corr_matrix = plot_correlation_matrix(perf,orig)
+corr_matrix = plot_correlation_matrix(merged)
 
-print("DOne")
 
-'''
-# Distribution of full prepayments (ZeroBalanceCode = 1.0) over years
+## PIE 
+BLUE   = "#2f3b69"
+GREY   = "#9f9f9f"
+PURPLE = "#c197d2"
+palette = [BLUE, GREY, PURPLE, "#b7b7b7", "#d9c7e8"]  
 
-# Ensure date format
-perf["ZeroBalanceEffectiveDate"] = pd.to_datetime(perf["ZeroBalanceEffectiveDate"], errors="coerce")
 
-# Filter only full prepayments
-prepaid = perf[perf["ZeroBalanceCode"].astype(str).str.zfill(2) == "1.0"].copy()
+save_path = "Outputs/figures/Data_analysis/"
+os.makedirs(save_path, exist_ok=True)
 
-# Extract the year of prepayment
-prepaid["PrepayYear"] = prepaid["ZeroBalanceEffectiveDate"].dt.year
+# Count unique loans per state
+state_counts = (
+    merged.groupby("PropertyState")["LoanSequenceNumber"]
+      .nunique()
+      .sort_values(ascending=False))
 
-# Group and count
-prepay_per_year = (
-    prepaid.groupby("PrepayYear", as_index=False)
-    .size()
-    .rename(columns={"size": "NumPrepayments"})
-)
+# Use top 10 states
+top10 = state_counts.head(10)
 
+# Define color palette for slices
+palette = [BLUE, GREY, PURPLE] + [
+    plt.cm.Blues(0.4),
+    plt.cm.Greys(0.5),
+    plt.cm.Purples(0.5),
+    plt.cm.Blues(0.6),
+    plt.cm.Greys(0.7),
+    plt.cm.Purples(0.7),]
 
 # Plot
-plt.figure(figsize=(8, 5))
-sns.barplot(data=prepay_per_year, x="PrepayYear", y="NumPrepayments", color="#2f3b69")
-plt.title("Number of Full Prepayments (ZeroBalanceCode = 01) per Year")
-plt.xlabel("Year")
-plt.ylabel("Number of Loans")
-plt.grid(axis="y", alpha=0.3)
+plt.figure(figsize=(8, 8))
+plt.pie(
+    top10.values,
+    labels=top10.index,
+    autopct='%1.1f%%',
+    colors=palette[:len(top10)]
+)
+plt.title("Top 10 Property States by Unique Mortgages", color=BLUE)
 plt.tight_layout()
-plt.show()
 
-'''
+# Save figure 
+plt.savefig(save_path + "property_state_distribution.png", dpi=300)
+plt.close()  
+
+
+
+# PLOT per property
+save_path = "Outputs/figures/Data_analysis/"
+os.makedirs(save_path, exist_ok=True)
+
+# Count unique loans per property type
+ptype_counts = (
+    merged.groupby("PropertyType")["LoanSequenceNumber"]
+      .nunique()
+      .sort_values(ascending=False))
+
+plt.figure(figsize=(8, 5))
+plt.bar(ptype_counts.index, ptype_counts.values, color=palette[:len(ptype_counts)])
+
+plt.xlabel("Property Type", color=BLUE)
+plt.ylabel("Number of Unique Loans", color=BLUE)
+plt.title("Distribution of Unique Mortgages by Property Type", color=BLUE)
+plt.tight_layout()
+
+# Save figure
+plt.savefig(save_path + "property_type_distribution.png", dpi=300)
+plt.close()
+
+
+
+# Boxplot Full Prepayment
+save_path = "Outputs/figures/Data_analysis/"
+os.makedirs(save_path, exist_ok=True)
+
+# Filter full prepayments only (PrepayType = 1)
+full_prepay = merged[merged["PrepayType"] == 1]
+
+plt.figure(figsize=(8, 6))
+plt.boxplot(full_prepay["LoanAge"], vert=True,
+            patch_artist=True,
+            boxprops=dict(facecolor=BLUE, color="black"),
+            medianprops=dict(color="white", linewidth=2))
+
+plt.title("Distribution of Loan Age at Full Prepayment", color=BLUE)
+plt.ylabel("Loan Age at Full Prepayment (months)", color=BLUE)
+plt.tight_layout()
+
+plt.savefig(save_path + "loan_age_full_prepayment.png", dpi=300)
+plt.close()   
+
+
+
+# Boxplot Partial Prepayment
+save_path = "Outputs/figures/Data_analysis/"
+os.makedirs(save_path, exist_ok=True)
+
+partial_prepay = merged[merged["PrepayType"] == 2]
+
+plt.figure(figsize=(8, 6))
+plt.boxplot(
+    partial_prepay["LoanAge"],
+    vert=True,
+    patch_artist=True,
+    boxprops=dict(facecolor=BLUE, color="black"),
+    medianprops=dict(color="white", linewidth=2)
+)
+
+plt.title("Distribution of Loan Age at Partial Prepayment", color=BLUE)
+plt.ylabel("Loan Age at Partial Prepayment (months)", color=BLUE)
+plt.tight_layout()
+
+plt.savefig(save_path + "loan_age_partial_prepayment.png", dpi=300)
+plt.close()
+
+
+# Seasonality check - do we see some pronouce effect of prepayment in some months
+
+merged = pd.read_csv("Outputs/merged.csv")
+save_path = "Outputs/figures/Data_analysis/"
+os.makedirs(save_path, exist_ok=True) 
+
+merged["Month"] = pd.to_datetime(merged["MonthlyReportingPeriod"]).dt.month
+
+all_counts = (merged[merged["PrepayType"].isin([1,2])].groupby("Month").size())
+
+seasonality_pct = (all_counts / all_counts.sum()) *100
+
+plt.figure(figsize=(10,5))
+plt.plot(seasonality_pct.index, seasonality_pct.values, marker='o', color=BLUE)
+plt.xlabel("Month")
+plt.ylabel("Percentage of Yearly Prepayments")
+plt.title("Monthly Prepayment Seasonality (Normalized)")
+plt.grid(True)
+plt.xticks(range(1,13))
+plt.savefig(save_path + "seasonality.png", dpi=300)
+plt.close()
+
+

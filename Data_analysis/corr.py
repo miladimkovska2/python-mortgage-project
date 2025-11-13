@@ -7,8 +7,7 @@ from pathlib import Path
 
 
 def plot_correlation_matrix(
-    perf: pd.DataFrame,
-    orig: pd.DataFrame,
+    merged: pd.DataFrame,
     *,
     fig_dir: str = "Outputs/Figures/data_analysis",
     fig_filename: str = "correlation_matrix.png",
@@ -17,20 +16,6 @@ def plot_correlation_matrix(
     BLUE, GREY, PURPLE = "#2f3b69", "#9f9f9f", "#c197d2"
     cmap = LinearSegmentedColormap.from_list("blue_grey_purple", [BLUE, GREY, PURPLE])
 
-    first_report = (
-        perf.groupby("LoanSequenceNumber", as_index=False)
-        .agg(FirstReportingPeriod=("MonthlyReportingPeriod", "min"))
-    )
-
-    merged = (
-        perf.merge(orig[["LoanSequenceNumber", "MaturityDate"]],
-                   on="LoanSequenceNumber", how="left")
-        .merge(first_report, on="LoanSequenceNumber", how="left"))
-
-    # Compute LoanAge (months since first reporting)
-    merged["LoanAge"] = ((merged["MonthlyReportingPeriod"] - merged["FirstReportingPeriod"]).dt.days / 30)
-
-   
     # Select and correlate key variables
     corr_vars = merged[["CurrentActualUPB", "EstimatedLTV", "LoanAge"]].copy()
     corr = corr_vars.corr(numeric_only=True)
