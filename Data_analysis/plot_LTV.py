@@ -29,8 +29,7 @@ def plot_estimated_ltv_trend(
         color="#2f3b69",         
         marker="o",
         linewidth=2,
-        label="Average Estimated LTV"
-    )
+        label="Average Estimated LTV")
 
     plt.xlabel("Year")
     plt.ylabel("Estimated LTV")
